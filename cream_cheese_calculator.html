@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奶油奶酪配料计算系统 | Cream Cheese Formulation Calculator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: rgba(17, 24, 39, 0.85);
+    --bg-input: #0d1420;
+    --border: rgba(56, 189, 248, 0.25);
+    --border-hover: rgba(56, 189, 248, 0.6);
+    --cyan: #38bdf8;
+    --cyan-glow: rgba(56, 189, 248, 0.4);
+    --amber: #f59e0b;
+    --amber-glow: rgba(245, 158, 11, 0.4);
+    --emerald: #10b981;
+    --emerald-glow: rgba(16, 185, 129, 0.4);
+    --rose: #f43f5e;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .grid-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .logo-ring {
+    width: 72px;
+    height: 72px;
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    animation: pulse-ring 3s ease-in-out infinite;
+  }
+
+  .logo-ring::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 50%;
+    animation: rotate 12s linear infinite;
+    border-top-color: transparent;
+    border-right-color: transparent;
+  }
+
+  .logo-ring svg {
+    width: 36px;
+    height: 36px;
+    fill: var(--cyan);
+    filter: drop-shadow(0 0 8px var(--cyan-glow));
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 20px var(--cyan-glow), inset 0 0 20px rgba(56,189,248,0.1); }
+    50% { box-shadow: 0 0 40px var(--cyan-glow), inset 0 0 30px rgba(56,189,248,0.2); }
+  }
+
+  @keyframes rotate {
+    to { transform: rotate(360deg); }
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--cyan), #a78bfa, var(--emerald));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  .version-tag {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .card-icon.cyan { background: rgba(56, 189, 248, 0.15); color: var(--cyan); }
+  .card-icon.amber { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+  .card-icon.emerald { background: rgba(16, 185, 129, 0.15); color: var(--emerald); }
+  .card-icon.rose { background: rgba(244, 63, 94, 0.15); color: var(--rose); }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .card-title-en {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .input-group {
+    margin-bottom: 18px;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  label .unit {
+    color: var(--cyan);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  label .hint {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+    font-size: 11px;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    transition: all 0.25s ease;
+    outline: none;
+  }
+
+  input[type="number"]:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+  }
+
+  .btn-calculate {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--cyan), #06b6d4);
+    border: none;
+    border-radius: 10px;
+    color: var(--bg-primary);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-calculate::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .btn-calculate:hover::before {
+    left: 100%;
+  }
+
+  .btn-calculate:hover {
+    box-shadow: 0 0 30px var(--cyan-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn-calculate:active {
+    transform: translateY(0);
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .result-item {
+    background: rgba(13, 20, 32, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .result-item.highlight {
+    border-color: var(--cyan);
+    background: rgba(56, 189, 248, 0.08);
+  }
+
+  .result-item.amber-hl {
+    border-color: var(--amber);
+    background: rgba(245, 158, 11, 0.08);
+  }
+
+  .result-item.emerald-hl {
+    border-color: var(--emerald);
+    background: rgba(16, 185, 129, 0.08);
+  }
+
+  .result-item:hover {
+    transform: translateY(-2px);
+  }
+
+  .result-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .result-value {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .result-unit {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .color-cyan { color: var(--cyan); text-shadow: 0 0 10px var(--cyan-glow); }
+  .color-amber { color: var(--amber); text-shadow: 0 0 10px var(--amber-glow); }
+  .color-emerald { color: var(--emerald); text-shadow: 0 0 10px var(--emerald-glow); }
+  .color-rose { color: var(--rose); }
+
+  .verification-box {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 10px;
+  }
+
+  .verification-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+
+  .verification-row:not(:last-child) {
+    border-bottom: 1px dashed rgba(16, 185, 129, 0.2);
+  }
+
+  .verification-row span:first-child { color: var(--text-secondary); }
+  .verification-row span:last-child {
+    font-family: 'Consolas', monospace;
+    color: var(--emerald);
+    font-weight: 600;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.2), transparent);
+    margin: 20px 0;
+  }
+
+  .flow-diagram {
+    grid-column: 1 / -1;
+  }
+
+  .flow-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    flex-wrap: wrap;
+  }
+
+  .flow-node {
+    padding: 16px 24px;
+    border-radius: 12px;
+    text-align: center;
+    min-width: 120px;
+    position: relative;
+  }
+
+  .flow-node .fn-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .flow-node .fn-value {
+    font-family: 'Consolas', monospace;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .flow-node.raw {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+
+  .flow-node.mix {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+  }
+
+  .flow-node.product {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+
+  .flow-node.byproduct {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+
+  .flow-arrow {
+    color: var(--cyan);
+    font-size: 22px;
+    opacity: 0.6;
+  }
+
+  .info-section {
+    grid-column: 1 / -1;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .info-card {
+    background: rgba(13, 20, 32, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .info-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cyan);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+
+  .info-card-title .num {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--cyan);
+    color: var(--bg-primary);
+    font-size: 12px;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .info-card p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+  }
+
+  .formula {
+    background: var(--bg-input);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    color: var(--cyan);
+    margin: 8px 0;
+    letter-spacing: 0.5px;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+    .flow-container { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+    h1 { font-size: 24px; }
+  }
+
+  .toast {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--emerald);
+    color: var(--bg-primary);
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    z-index: 1000;
+    transition: transform 0.4s ease;
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .reset-link {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+
+  .reset-link:hover {
+    color: var(--cyan);
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--emerald);
+    margin-right: 8px;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--emerald); }
+    50% { opacity: 0.4; box-shadow: 0 0 2px var(--emerald); }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="toast" id="toast">✓ 计算完成</div>
+
+<div class="container">
+  <header>
+    <div class="logo-ring">
+      <svg viewBox="0 0 24 24"><path d="M12 2C7 2 3 6 3 11c0 6 5 11 9 11s9-5 9-11c0-5-4-9-9-9zm0 4c3.3 0 6 2.7 6 6s-2.7 6-6 6-6-2.7-6-6 2.7-6 6-6z"/></svg>
+    </div>
+    <h1>奶油奶酪配料计算系统</h1>
+    <div class="subtitle">CREAM CHEESE FORMULATION CALCULATOR</div>
+    <div class="version-tag">SYSTEM v1.0 · 配料工程模块</div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- 左侧：生产需求 & 参数设置 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon cyan">📋</div>
+        <div>
+          <div class="card-title">生产需求 · 目标产量</div>
+          <div class="card-title-en">Production Target</div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>奶油奶酪目标产量 <span class="unit">(吨)</span></label>
+        <input type="number" id="targetYield" value="1" step="0.1" min="0" placeholder="请输入目标产量">
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-header" style="margin-bottom:16px;">
+        <div class="card-icon amber">⚙️</div>
+        <div>
+          <div class="card-title">原料参数 · 可调整</div>
+          <div class="card-title-en">Raw Material Parameters</div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group">
+          <label>稀奶油脂肪含量 <span class="unit">%</span> <span class="hint">默认 40%</span></label>
+          <input type="number" id="creamFat" value="40" step="0.1" min="0" max="100">
+        </div>
+        <div class="input-group">
+          <label>稀奶油蛋白含量 <span class="unit">%</span> <span class="hint">默认 2%</span></label>
+          <input type="number" id="creamProtein" value="2" step="0.1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group">
+          <label>脱脂奶脂肪含量 <span class="unit">%</span> <span class="hint">默认 0.05%</span></label>
+          <input type="number" id="skimFat" value="0.05" step="0.01" min="0" max="100">
+        </div>
+        <div class="input-group">
+          <label>脱脂奶蛋白含量 <span class="unit">%</span> <span class="hint">默认 3.2%</span></label>
+          <input type="number" id="skimProtein" value="3.2" step="0.1" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-header" style="margin-bottom:16px;">
+        <div class="card-icon emerald">🎯</div>
+        <div>
+          <div class="card-title">工艺目标 · 可调整</div>
+          <div class="card-title-en">Process Target</div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group">
+          <label>目标脂蛋比 <span class="unit">F/P</span> <span class="hint">默认 3.6</span></label>
+          <input type="number" id="targetFP" value="3.6" step="0.1" min="0">
+        </div>
+        <div class="input-group">
+          <label>标准化牛奶 : 奶酪 <span class="unit">吨/吨</span> <span class="hint">默认 3.0</span></label>
+          <input type="number" id="conversionRatio" value="3" step="0.1" min="0">
+        </div>
+      </div>
+
+      <button class="btn-calculate" onclick="calculate()">⚡ 执行计算 CALCULATE</button>
+      <div class="reset-link" onclick="resetDefaults()">↺ 恢复默认参数</div>
+    </div>
+
+    <!-- 右侧：计算结果 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon emerald">📊</div>
+        <div>
+          <div class="card-title">计算结果 · 配料需求量</div>
+          <div class="card-title-en">Calculation Results</div>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-item highlight">
+          <div class="result-label">稀奶油需求</div>
+          <div class="result-value color-cyan" id="resCream">--</div>
+          <div class="result-unit">吨 (metric ton)</div>
+        </div>
+        <div class="result-item amber-hl">
+          <div class="result-label">脱脂奶需求</div>
+          <div class="result-value color-amber" id="resSkim">--</div>
+          <div class="result-unit">吨 (metric ton)</div>
+        </div>
+        <div class="result-item emerald-hl">
+          <div class="result-label">标准化牛奶总量</div>
+          <div class="result-value color-emerald" id="resStandard">--</div>
+          <div class="result-unit">吨 (metric ton)</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">副产乳清量</div>
+          <div class="result-value" id="resWhey">--</div>
+          <div class="result-unit">吨 (metric ton)</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">稀奶油占比</div>
+          <div class="result-value color-cyan" id="resCreamPct">--</div>
+          <div class="result-unit">% of total</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">脱脂奶占比</div>
+          <div class="result-value color-amber" id="resSkimPct">--</div>
+          <div class="result-unit">% of total</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="verification-box">
+        <div style="font-size:12px; color:var(--emerald); letter-spacing:2px; margin-bottom:10px;">
+          <span class="status-dot"></span>实时验证 · MASS BALANCE VERIFICATION
+        </div>
+        <div class="verification-row">
+          <span>混合料脂肪总量</span>
+          <span id="verifyFat">-- kg</span>
+        </div>
+        <div class="verification-row">
+          <span>混合料蛋白总量</span>
+          <span id="verifyProtein">-- kg</span>
+        </div>
+        <div class="verification-row">
+          <span>实际脂蛋比 F/P</span>
+          <span id="verifyFP">--</span>
+        </div>
+        <div class="verification-row">
+          <span>与目标偏差</span>
+          <span id="verifyDiff">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 流程图 -->
+    <div class="card flow-diagram">
+      <div class="card-header">
+        <div class="card-icon rose">🔄</div>
+        <div>
+          <div class="card-title">物料流向 · MATERIAL FLOW</div>
+          <div class="card-title-en">Process Flow</div>
+        </div>
+      </div>
+      <div class="flow-container">
+        <div class="flow-node raw">
+          <div class="fn-label">稀奶油 Cream</div>
+          <div class="fn-value color-cyan" id="flowCream">--</div>
+        </div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-node raw">
+          <div class="fn-label">脱脂奶 Skim</div>
+          <div class="fn-value color-amber" id="flowSkim">--</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node mix">
+          <div class="fn-label">标准化牛奶 Standardized</div>
+          <div class="fn-value" style="color:#a78bfa;" id="flowStandard">--</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node product">
+          <div class="fn-label">奶油奶酪 Product</div>
+          <div class="fn-value color-emerald" id="flowCheese">--</div>
+        </div>
+        <div class="flow-arrow">+</div>
+        <div class="flow-node byproduct">
+          <div class="fn-label">乳清 Whey</div>
+          <div class="fn-value color-amber" id="flowWhey">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 说明区 -->
+    <div class="card info-section">
+      <div class="card-header">
+        <div class="card-icon cyan">📖</div>
+        <div>
+          <div class="card-title">计算原理 · 使用说明</div>
+          <div class="card-title-en">Algorithm & Instructions</div>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title"><span class="num">1</span> 计算逻辑</div>
+          <p>系统基于<b>物料平衡法</b>建立方程组，求解满足目标脂蛋比(F/P)时稀奶油(A)与脱脂奶(B)的混合比例。</p>
+          <div class="formula">
+            0.40·A + 0.0005·B = Fat<br>
+            0.02·A + 0.032·B = Protein<br>
+            Fat / Protein = 3.60
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title"><span class="num">2</span> 反推逻辑</div>
+          <p>输入目标奶酪产量后，系统按<b>产率系数</b>(标准化牛奶→奶酪)反推所需原料总量。产率受生产工艺、菌种、发酵时间等因素影响，可根据实际生产数据校准。</p>
+          <div class="formula">
+            标准化牛奶 = 目标产量 × 产率系数<br>
+            副产乳清 = 标准化牛奶 − 目标产量
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title"><span class="num">3</span> 参数调整</div>
+          <p>所有原料参数和工艺目标均可灵活调整。实际生产中，不同批次的稀奶油/脱脂奶组分可能有波动，建议<b>每日检测</b>原料实际脂肪与蛋白含量后更新参数，以保证配料精度。</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span class="status-dot"></span>
+    CALCULATION ENGINE ONLINE · 仅供工程参考，实际生产请以实验室检测数据为准
+  </footer>
+</div>
+
+<script>
+  const DEFAULTS = {
+    creamFat: 40,
+    creamProtein: 2,
+    skimFat: 0.05,
+    skimProtein: 3.2,
+    targetFP: 3.6,
+    conversionRatio: 3,
+    targetYield: 1
+  };
+
+  function calculate() {
+    const targetYield = parseFloat(document.getElementById('targetYield').value) || 0;
+    const creamFat = parseFloat(document.getElementById('creamFat').value) / 100;
+    const creamProtein = parseFloat(document.getElementById('creamProtein').value) / 100;
+    const skimFat = parseFloat(document.getElementById('skimFat').value) / 100;
+    const skimProtein = parseFloat(document.getElementById('skimProtein').value) / 100;
+    const targetFP = parseFloat(document.getElementById('targetFP').value);
+    const ratio = parseFloat(document.getElementById('conversionRatio').value);
+
+    if (targetYield <= 0) {
+      showToast('请输入有效的目标产量', 'error');
+      return;
+    }
+
+    const M = targetYield * ratio;
+
+    const a = creamFat - targetFP * creamProtein;
+    const b = skimFat - targetFP * skimProtein;
+
+    let skimTons, creamTons;
+    if (Math.abs(a - b) < 1e-10) {
+      showToast('参数冲突：稀奶油与脱脂奶无法配出目标脂蛋比', 'error');
+      return;
+    }
+
+    skimTons = M * a / (a - b);
+    creamTons = M - skimTons;
+
+    if (creamTons < 0 || skimTons < 0) {
+      showToast('计算结果为负值，请检查参数合理性', 'error');
+      return;
+    }
+
+    const whey = M - targetYield;
+    const creamPct = (creamTons / M) * 100;
+    const skimPct = (skimTons / M) * 100;
+
+    const fatTotal = creamTons * 1000 * creamFat + skimTons * 1000 * skimFat;
+    const proteinTotal = creamTons * 1000 * creamProtein + skimTons * 1000 * skimProtein;
+    const actualFP = fatTotal / proteinTotal;
+    const diffPct = ((actualFP - targetFP) / targetFP) * 100;
+
+    setText('resCream', creamTons.toFixed(4));
+    setText('resSkim', skimTons.toFixed(4));
+    setText('resStandard', M.toFixed(4));
+    setText('resWhey', whey.toFixed(4));
+    setText('resCreamPct', creamPct.toFixed(2));
+    setText('resSkimPct', skimPct.toFixed(2));
+
+    setText('verifyFat', fatTotal.toFixed(1) + ' kg');
+    setText('verifyProtein', proteinTotal.toFixed(1) + ' kg');
+    setText('verifyFP', actualFP.toFixed(4));
+    setText('verifyDiff', diffPct.toFixed(4) + ' %');
+
+    setText('flowCream', creamTons.toFixed(2) + ' t');
+    setText('flowSkim', skimTons.toFixed(2) + ' t');
+    setText('flowStandard', M.toFixed(2) + ' t');
+    setText('flowCheese', targetYield.toFixed(2) + ' t');
+    setText('flowWhey', whey.toFixed(2) + ' t');
+
+    showToast('✓ 计算完成', 'success');
+  }
+
+  function setText(id, val) {
+    document.getElementById(id).textContent = val;
+  }
+
+  function resetDefaults() {
+    Object.keys(DEFAULTS).forEach(k => {
+      document.getElementById(k).value = DEFAULTS[k];
+    });
+    showToast('参数已恢复默认', 'success');
+  }
+
+  let toastTimer;
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = type === 'error' ? 'var(--rose)' : 'var(--emerald)';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') calculate();
+  });
+
+  calculate();
+</script>
+
+</body>
+</html>
